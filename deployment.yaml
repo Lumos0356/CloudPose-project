@@ -8,13 +8,12 @@ spec:
     matchLabels:
       app: cloudpose
   template:
-    metadata:
-      labels:
-        app: cloudpose
     spec:
+      imagePullSecrets:
+      - name: aliyun-registry-secret
       containers:
       - name: cloudpose
-        image: crpi-r4l5tp7zj19m2jd.cn-hongkong.personal.cr.aliyuncs.com/cloudpose-api/backend-cloudpose-api:latest
+        image: crpi-rl4l5tp7zj19m2jd.cn-hongkong.personal.cr.aliyuncs.com/cloudpose-api/cloudpose:latest
         ports:
         - containerPort: 60000
         resources:
