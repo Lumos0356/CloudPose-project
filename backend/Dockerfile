@@ -13,7 +13,7 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # 复制requirements并安装Python依赖
-COPY requirements.txt .
+COPY backend/requirements.txt .
 RUN pip install --no-cache-dir --user -r requirements.txt
 
 # 生产阶段
@@ -39,11 +39,11 @@ WORKDIR /app
 RUN mkdir -p /app/model
 
 # 复制应用代码
-COPY app.py .
-COPY run.py .
+COPY backend/app.py .
+COPY backend/run.py .
 
 # 复制MoveNet模型文件
-COPY ../model2-movenet/movenet-full-256.tflite ./model/
+COPY model2-movenet/movenet-full-256.tflite ./model/
 
 # 创建非root用户
 RUN useradd --create-home --shell /bin/bash app \

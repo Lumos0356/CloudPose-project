@@ -3,8 +3,8 @@ version: '3.8'
 services:
   cloudpose-api:
     build:
-      context: .
-      dockerfile: Dockerfile
+      context: ..
+      dockerfile: backend/Dockerfile
     container_name: cloudpose-api
     ports:
       - "8000:8000"
