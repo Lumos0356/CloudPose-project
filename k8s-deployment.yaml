@@ -22,7 +22,7 @@ spec:
     spec:
       containers:
       - name: cloudpose
-        image: registry.cn-hangzhou.aliyuncs.com/cloudpose-test/cloudpose:latest
+        image: cloudpose:latest
         ports:
         - containerPort: 8000
           name: http
@@ -54,9 +54,7 @@ spec:
           periodSeconds: 10
           timeoutSeconds: 5
           failureThreshold: 3
-      # 镜像拉取策略
-      imagePullSecrets:
-      - name: aliyun-acr-secret  # 阿里云ACR访问密钥
+      # 使用本地构建的镜像，无需镜像拉取密钥
       # 节点选择器（可选）
       nodeSelector:
         kubernetes.io/os: linux
@@ -74,13 +72,10 @@ metadata:
   namespace: default
   labels:
     app: cloudpose
-  # 阿里云SLB注解配置
-  annotations:
-    service.beta.kubernetes.io/alicloud-loadbalancer-spec: "slb.s1.small"
-    service.beta.kubernetes.io/alicloud-loadbalancer-charge-type: "paybytraffic"
-    service.beta.kubernetes.io/alicloud-loadbalancer-address-type: "internet"
+  # 本地Kubernetes集群配置
+  annotations: {}
 spec:
-  type: LoadBalancer  # 阿里云SLB负载均衡
+  type: NodePort  # 本地集群使用NodePort
   ports:
   - port: 80
     targetPort: 8000
