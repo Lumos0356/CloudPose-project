@@ -15,7 +15,7 @@ spec:
         app: cloudpose
     spec:
       containers:
-      - name: cloudpose
+      - name: cloudpose-api
         image: backend-cloudpose-api:latest  # 你的 Docker 镜像名
         ports:
         - containerPort: 8000   # 容器暴露端口，与应用内端口一致
