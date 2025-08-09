@@ -17,6 +17,7 @@ spec:
       containers:
       - name: cloudpose
         image: crpi-rl4l5tp7zj19m2jd-vpc.cn-hongkong.personal.cr.aliyuncs.com/cloudpose-api/cloudpose:latest
+        ports:
         - containerPort: 60000
         resources:
           requests:
