@@ -406,6 +406,64 @@ sudo iptables -L
 curl -v http://$SERVICE_IP/health
 ```
 
+#### 5. Kubernetes集群初始化失败
+
+**问题**: 执行`kubeadm init`时出现containerd运行时错误
+
+```
+[ERROR CRI]: container runtime is not running: output: time="2025-08-10T01:10:28+08:00" level=fatal msg="validate service connection: CRI v1 runtime API is not implemented for endpoint \"unix:///var/run/containerd/containerd.sock\": rpc error: code = Unimplemented desc = unknown service runtime.v1.RuntimeService"
+```
+
+**解决方案**: 使用containerd修复脚本
+
+```bash
+# 下载并运行containerd修复脚本
+wget https://raw.githubusercontent.com/your-repo/CloudPose/main/backend/fix_k8s_containerd.sh
+chmod +x fix_k8s_containerd.sh
+sudo ./fix_k8s_containerd.sh
+
+# 或者手动修复containerd配置
+sudo systemctl stop containerd
+sudo mkdir -p /etc/containerd
+sudo containerd config default > /etc/containerd/config.toml
+sudo sed -i 's/SystemdCgroup = false/SystemdCgroup = true/' /etc/containerd/config.toml
+sudo systemctl daemon-reload
+sudo systemctl enable containerd
+sudo systemctl start containerd
+
+# 重置并重新初始化Kubernetes
+sudo kubeadm reset -f
+sudo kubeadm init --pod-network-cidr=10.244.0.0/16
+```
+
+**验证修复**:
+
+```bash
+# 检查containerd服务状态
+sudo systemctl status containerd
+
+# 测试CRI接口
+sudo crictl version
+
+# 检查containerd配置
+sudo cat /etc/containerd/config.toml | grep SystemdCgroup
+```
+
+**常见containerd问题**:
+
+1. **SystemdCgroup未启用**: 确保配置文件中`SystemdCgroup = true`
+2. **配置文件损坏**: 重新生成默认配置文件
+3. **服务未启动**: 检查systemd服务状态和日志
+4. **权限问题**: 确保以root权限运行修复脚本
+
+```bash
+# 查看containerd详细日志
+sudo journalctl -u containerd -f
+
+# 查看kubelet日志
+sudo journalctl -u kubelet -f
+```
+
 ### 性能调优建议
 
 #### 1. 容器资源优化
