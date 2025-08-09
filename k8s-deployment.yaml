@@ -22,7 +22,7 @@ spec:
     spec:
       containers:
       - name: cloudpose
-        image: cloudpose:latest
+        image: backend-cloudpose-api:latest
         ports:
         - containerPort: 8000
           name: http
