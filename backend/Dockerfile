@@ -1,7 +1,7 @@
 # 多阶段构建优化镜像大小
 FROM python:3.10-slim as builder
 
-# 安装构建依赖
+# 安装构建依赖（包含OpenCV所需的库）
 RUN apt-get update && apt-get install -y \
     gcc \
     g++ \
@@ -10,6 +10,25 @@ RUN apt-get update && apt-get install -y \
     libxext6 \
     libxrender-dev \
     libgomp1 \
+    libgl1-mesa-glx \
+    libgtk-3-0 \
+    libavcodec-dev \
+    libavformat-dev \
+    libswscale-dev \
+    libv4l-dev \
+    libxvidcore-dev \
+    libx264-dev \
+    libjpeg-dev \
+    libpng-dev \
+    libtiff-dev \
+    gfortran \
+    openexr \
+    libatlas-base-dev \
+    python3-dev \
+    python3-numpy \
+    libtbb2 \
+    libtbb-dev \
+    libdc1394-22-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # 复制requirements并安装Python依赖
@@ -19,7 +38,7 @@ RUN pip install --no-cache-dir --user -r requirements.txt
 # 生产阶段
 FROM python:3.10-slim
 
-# 安装运行时依赖
+# 安装运行时依赖（包含OpenCV所需的GUI库）
 RUN apt-get update && apt-get install -y \
     libglib2.0-0 \
     libsm6 \
@@ -27,6 +46,26 @@ RUN apt-get update && apt-get install -y \
     libxrender-dev \
     libgomp1 \
     curl \
+    libgl1-mesa-glx \
+    libglib2.0-0 \
+    libgtk-3-0 \
+    libavcodec-dev \
+    libavformat-dev \
+    libswscale-dev \
+    libv4l-dev \
+    libxvidcore-dev \
+    libx264-dev \
+    libjpeg-dev \
+    libpng-dev \
+    libtiff-dev \
+    gfortran \
+    openexr \
+    libatlas-base-dev \
+    python3-dev \
+    python3-numpy \
+    libtbb2 \
+    libtbb-dev \
+    libdc1394-22-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # 设置工作目录
