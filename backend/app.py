@@ -56,7 +56,8 @@ def load_model():
     """加载MoveNet模型"""
     global interpreter, model_loaded
     try:
-        model_path = '/Users/luka/Downloads/client/model2-movenet/movenet-full-256.tflite'
+        # 优先使用环境变量，否则使用默认容器路径
+        model_path = os.environ.get('MODEL_PATH', '/app/model/movenet-full-256.tflite')
         if not os.path.exists(model_path):
             logger.error(f"Model file not found: {model_path}")
             return False
