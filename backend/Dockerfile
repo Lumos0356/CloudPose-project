@@ -29,9 +29,6 @@ RUN apt-get update && apt-get install -y \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
-# 从构建阶段复制Python包
-COPY --from=builder /root/.local /root/.local
-
 # 设置工作目录
 WORKDIR /app
 
@@ -46,12 +43,18 @@ COPY backend/run.py .
 COPY model2-movenet/movenet-full-256.tflite ./model/
 
 # 创建非root用户
-RUN useradd --create-home --shell /bin/bash app \
-    && chown -R app:app /app
+RUN useradd --create-home --shell /bin/bash app
+
+# 从构建阶段复制Python包到app用户目录
+COPY --from=builder /root/.local /home/app/.local
+RUN chown -R app:app /home/app/.local
+
+# 修改app目录权限
+RUN chown -R app:app /app
 USER app
 
 # 设置环境变量
-ENV PATH=/root/.local/bin:$PATH
+ENV PATH=/home/app/.local/bin:$PATH
 ENV PYTHONPATH=/app
 ENV FLASK_ENV=production
 ENV MODEL_PATH=/app/model/movenet-full-256.tflite
