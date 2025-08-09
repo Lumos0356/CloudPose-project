@@ -74,6 +74,11 @@ metadata:
   namespace: default
   labels:
     app: cloudpose
+  # 阿里云SLB注解配置
+  annotations:
+    service.beta.kubernetes.io/alicloud-loadbalancer-spec: "slb.s1.small"
+    service.beta.kubernetes.io/alicloud-loadbalancer-charge-type: "paybytraffic"
+    service.beta.kubernetes.io/alicloud-loadbalancer-address-type: "internet"
 spec:
   type: LoadBalancer  # 阿里云SLB负载均衡
   ports:
@@ -83,11 +88,6 @@ spec:
     name: http
   selector:
     app: cloudpose
-  # 阿里云SLB注解配置
-  annotations:
-    service.beta.kubernetes.io/alicloud-loadbalancer-spec: "slb.s1.small"
-    service.beta.kubernetes.io/alicloud-loadbalancer-charge-type: "paybytraffic"
-    service.beta.kubernetes.io/alicloud-loadbalancer-address-type: "internet"
 
 ---
 # HorizontalPodAutoscaler - 水平Pod自动扩缩容
