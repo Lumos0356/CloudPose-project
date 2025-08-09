@@ -2,6 +2,8 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: cloudpose-deployment
+  labels:
+    app: cloudpose
 spec:
   replicas: 2
   selector:
@@ -12,17 +14,17 @@ spec:
       labels:
         app: cloudpose
     spec:
-      imagePullSecrets:
-      - name: aliyun-registry-secret
       containers:
-      - name: cloudpose
-        image: crpi-rl4l5tp7zj19m2jd-vpc.cn-hongkong.personal.cr.aliyuncs.com/cloudpose-api/cloudpose:latest
-        ports:
-        - containerPort: 60000
-        resources:
-          requests:
-            cpu: "0.5"
-            memory: "512Mi"
-          limits:
-            cpu: "0.5"
-            memory: "512Mi"
+        - name: cloudpose
+          image: crpi-rl4l5tp7zj19m2jd-vpc.cn-hongkong.personal.cr.aliyuncs.com/cloudpose-api/cloudpose:latest
+          ports:
+            - containerPort: 60000
+          resources:
+            limits:
+              cpu: "0.5"
+              memory: "512Mi"
+            requests:
+              cpu: "0.5"
+              memory: "512Mi"
+      imagePullSecrets:
+        - name: aliyun-registry-secret
