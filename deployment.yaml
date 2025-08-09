@@ -3,11 +3,14 @@ kind: Deployment
 metadata:
   name: cloudpose-deployment
 spec:
-  replicas: 1
+  replicas: 2
   selector:
     matchLabels:
       app: cloudpose
   template:
+    metadata:
+      labels:
+        app: cloudpose
     spec:
       imagePullSecrets:
       - name: aliyun-registry-secret
