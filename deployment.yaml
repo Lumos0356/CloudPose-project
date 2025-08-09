@@ -2,10 +2,8 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: cloudpose-deployment
-  labels:
-    app: cloudpose
 spec:
-  replicas: 1  # 副本数，可按需调整
+  replicas: 1
   selector:
     matchLabels:
       app: cloudpose
@@ -15,28 +13,14 @@ spec:
         app: cloudpose
     spec:
       containers:
-      - name: cloudpose-api
-        image: backend-cloudpose-api:latest  # 你的 Docker 镜像名
-        imagePullPolicy: Never
+      - name: cloudpose
+        image: crpi-r4l5tp7zj19m2jd.cn-hongkong.personal.cr.aliyuncs.com/cloudpose-api/backend-cloudpose-api:latest
         ports:
-        - containerPort: 8000   # 容器暴露端口，与应用内端口一致
+        - containerPort: 60000
         resources:
-          limits:
-            cpu: "1"
-            memory: "1Gi"
           requests:
-            cpu: "500m"
+            cpu: "0.5"
             memory: "512Mi"
-        # 若有健康检查需求，添加 livenessProbe/readinessProbe
-        livenessProbe:
-          httpGet:
-            path: /health
-            port: 8000
-          initialDelaySeconds: 30
-          timeoutSeconds: 5
-        readinessProbe:
-          httpGet:
-            path: /health
-            port: 8000
-          initialDelaySeconds: 10
-          timeoutSeconds: 3
+          limits:
+            cpu: "0.5"
+            memory: "512Mi"

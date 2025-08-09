@@ -3,11 +3,11 @@ kind: Service
 metadata:
   name: cloudpose-service
 spec:
-  type: NodePort  # 测试用，生产可换 LoadBalancer 等
+  type: NodePort
   selector:
     app: cloudpose
   ports:
     - protocol: TCP
-      port: 80      # 集群内访问端口
-      targetPort: 8000  # 容器端口，与 Deployment 一致
-      nodePort: 31665   # 节点暴露端口（范围 30000 - 32767 ）s
+      port: 60000
+      targetPort: 60000
+      nodePort: 30080
