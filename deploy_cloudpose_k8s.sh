@@ -102,25 +102,90 @@ deploy_cloudpose() {
     log_success "CloudPose部署配置已应用"
 }
 
-# 等待部署就绪
+# 等待部署就绪（带超时和详细状态检查）
 wait_for_deployment() {
     log_info "等待CloudPose部署就绪..."
     
-    # 等待Deployment就绪
-    if kubectl wait --for=condition=available --timeout=300s deployment/cloudpose-deployment; then
-        log_success "CloudPose Deployment已就绪"
-    else
-        log_error "CloudPose Deployment未能在5分钟内就绪"
-        log_error "请检查Pod状态和日志"
-        return 1
-    fi
+    # 设置超时时间（秒）
+    TIMEOUT=300
+    START_TIME=$(date +%s)
+    
+    while true; do
+        CURRENT_TIME=$(date +%s)
+        ELAPSED=$((CURRENT_TIME - START_TIME))
+        
+        if [ $ELAPSED -ge $TIMEOUT ]; then
+            log_error "部署超时（${TIMEOUT}秒），开始诊断..."
+            
+            echo "\n📊 当前部署状态:"
+            kubectl get deployment cloudpose-deployment -o wide
+            
+            echo "\n🏃 Pod状态:"
+            kubectl get pods -l app=cloudpose -o wide
+            
+            echo "\n🔔 最近事件:"
+            kubectl get events --sort-by='.lastTimestamp' | tail -10
+            
+            echo "\n📋 Pod详细信息:"
+            PODS=$(kubectl get pods -l app=cloudpose -o jsonpath='{.items[*].metadata.name}')
+            for pod in $PODS; do
+                echo "\n--- Pod: $pod ---"
+                kubectl describe pod $pod | tail -20
+            done
+            
+            log_error "部署失败，请运行以下命令进行修复:"
+            echo "  ./fix_k8s_deployment_issues.sh"
+            echo "  ./quick_diagnose_k8s.sh"
+            return 1
+        fi
+        
+        # 检查部署状态
+        READY_REPLICAS=$(kubectl get deployment cloudpose-deployment -o jsonpath='{.status.readyReplicas}' 2>/dev/null || echo "0")
+        DESIRED_REPLICAS=$(kubectl get deployment cloudpose-deployment -o jsonpath='{.spec.replicas}' 2>/dev/null || echo "1")
+        
+        if [ "$READY_REPLICAS" = "$DESIRED_REPLICAS" ] && [ "$READY_REPLICAS" != "0" ]; then
+            log_success "CloudPose Deployment已就绪 ($READY_REPLICAS/$DESIRED_REPLICAS)"
+            break
+        fi
+        
+        # 显示当前状态
+        echo -ne "\r⏳ 等待部署就绪... ($ELAPSED/${TIMEOUT}s) - 就绪副本: $READY_REPLICAS/$DESIRED_REPLICAS"
+        
+        # 每30秒显示详细状态
+        if [ $((ELAPSED % 30)) -eq 0 ] && [ $ELAPSED -gt 0 ]; then
+            echo "\n\n📊 当前状态检查 (${ELAPSED}s):"
+            kubectl get pods -l app=cloudpose -o wide
+            
+            # 检查是否有错误状态的Pod
+            ERROR_PODS=$(kubectl get pods -l app=cloudpose --field-selector=status.phase!=Running,status.phase!=Succeeded -o jsonpath='{.items[*].metadata.name}' 2>/dev/null)
+            if [ -n "$ERROR_PODS" ]; then
+                echo "\n⚠️  发现问题Pod: $ERROR_PODS"
+                for pod in $ERROR_PODS; do
+                    POD_STATUS=$(kubectl get pod $pod -o jsonpath='{.status.phase}')
+                    echo "  - $pod: $POD_STATUS"
+                    
+                    # 如果Pod状态异常，显示更多信息
+                    if [ "$POD_STATUS" = "Pending" ] || [ "$POD_STATUS" = "Failed" ]; then
+                        echo "    原因: $(kubectl get pod $pod -o jsonpath='{.status.conditions[?(@.type=="PodScheduled")].reason}' 2>/dev/null || echo '未知')"
+                        echo "    消息: $(kubectl get pod $pod -o jsonpath='{.status.conditions[?(@.type=="PodScheduled")].message}' 2>/dev/null || echo '无')"
+                    fi
+                done
+            fi
+            
+            log_info "继续等待..."
+        fi
+        
+        sleep 5
+    done
+    
+    echo "" # 换行
     
     # 等待Pod运行
     log_info "等待Pod运行..."
-    if kubectl wait --for=condition=ready --timeout=300s pod -l app=cloudpose; then
+    if kubectl wait --for=condition=ready --timeout=60s pod -l app=cloudpose; then
         log_success "CloudPose Pod已运行"
     else
-        log_error "CloudPose Pod未能在5分钟内运行"
+        log_error "CloudPose Pod未能在1分钟内运行"
         log_error "请检查Pod状态和日志"
         return 1
     fi
