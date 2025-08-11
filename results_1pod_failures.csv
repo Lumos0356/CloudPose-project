@@ -1,0 +1,5 @@
+Method,Name,Error,Occurrences
+GET,/health,CatchResponseError('Health check failed: 0'),2
+GET,/metrics,CatchResponseError('Failed to load metrics: 0'),1
+POST,/api/pose_estimation_image,CatchResponseError('HTTP 0: '),1
+POST,/api/pose_detection,CatchResponseError('HTTP 0: '),2

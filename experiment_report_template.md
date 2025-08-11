@@ -1,285 +1,58 @@
-# CloudPose 负载测试实验报告
+# Experiments and Report
 
-**学生姓名**: [请填写您的姓名]  
-**导师姓名**: [请填写导师姓名]  
-**学生学号**: [请填写学生学号]  
-**实验日期**: [请填写实验日期]  
-**报告日期**: [请填写报告提交日期]  
+**Name:** Yuehuai Zhang 
+**Student Number:** 35523271 
 
 ---
 
-## 1. 实验概述
+## 1. Experiment Results
 
-本实验旨在测试CloudPose姿态检测服务在不同资源配置下的最大负载承受能力。通过在Kubernetes集群中部署不同数量的Pod，使用Locust负载测试工具模拟并发用户请求，分析系统的性能表现和扩展性。
+The table below summarizes the maximum number of concurrent users the system can handle with 100% success rate and the corresponding average response time, tested under different numbers of pods in the Kubernetes cluster. Two environments were compared: ECS Master Node and Local PC.
 
-### 1.1 实验目标
+### Table 1: Experiment Results
 
-- 确定系统在不同Pod配置下能够处理的最大并发用户数
-- 分析响应时间与负载的关系
-- 评估系统的水平扩展能力
-- 识别性能瓶颈和优化方向
-
-### 1.2 实验环境
-
-- **云平台**: [Nectar/Azure - 请选择]
-- **Kubernetes集群**: [请描述集群配置]
-- **节点配置**: 
-  - CPU请求和限制: 0.5 core
-  - 内存请求和限制: 512MB
-- **测试工具**: Locust v2.x
-- **测试图像**: 128个COCO数据集图像
-- **测试API**: `/api/pose_detection` (主要) 和 `/api/pose_estimation_image` (辅助)
+| # of Pods | ECS Master Node Max Users | ECS Master Node Avg. Response Time (ms) | Local PC Max Users | Local PC Avg. Response Time (ms) |
+| --------- | ------------------------- | --------------------------------------- | ------------------ | -------------------------------- |
+| 1         | 15                        | 4701.62                                 | 17                 | 1448.63                          |
+| 2         | 30                        | 171.41                                  | 22                 | 517.21                           |
+| 3         | 30                        | 105.53                                  | 38                 | 845.25                           |
+| 4         | 19                        | 257.21                                  | 36                 | 342.77                           |
 
 ---
 
-## 2. 实验设计
+## 2. Observations and Analysis
 
-### 2.1 实验参数
+### 2.1 ECS Master Node
+- When increasing from **1 pod to 2 pods**, maximum concurrent users doubled (15 → 30) and response time dropped drastically from **4701.62 ms** to **171.41 ms**.  
+- **2 to 3 pods** showed marginal improvement in response time (171.41 → 105.53 ms) but no increase in max users, suggesting CPU/memory limits or network saturation became the bottleneck.  
+- Increasing to **4 pods** unexpectedly reduced the max users to 19 and increased response time to 257.21 ms, which may indicate overhead from inter-pod coordination or resource contention on the master node.
 
-| 参数 | 值 | 说明 |
-|------|----|---------|
-| Pod数量 | 1, 2, 4, 8 | 水平扩展测试 |
-| 测试时长 | 5分钟 | 每个配置的测试持续时间 |
-| 用户生成速率 | 1用户/秒 | 逐步增加负载 |
-| 最大并发用户数 | [根据实际测试确定] | 直到成功率降至100%以下 |
-| 测试图像数量 | 128个 | 随机选择进行测试 |
+### 2.2 Local PC
+- Initial increase from **1 to 2 pods** improved response time significantly (1448.63 → 517.21 ms), though max users increased moderately (17 → 22).  
+- From **2 to 3 pods**, the system handled **38 concurrent users** but with increased response time (845.25 ms), possibly due to local hardware limits or network latency during scaling.  
+- At **4 pods**, max users slightly decreased (38 → 36), while response time improved to 342.77 ms, suggesting better load distribution but with diminishing returns in scalability.
 
-### 2.2 测试策略
-
-1. **渐进式负载测试**: 从少量用户开始，逐步增加并发用户数
-2. **稳定性验证**: 每个配置运行多次以确保结果一致性
-3. **失败阈值**: 当成功率低于100%时记录最大用户数
-4. **性能指标收集**: 记录响应时间、QPS、错误率等关键指标
+### 2.3 Cross-Environment Comparison
+- ECS Master Node performance was initially worse than Local PC for 1 pod due to possible VM network overhead, but showed better scaling behavior until resource limits were reached.  
+- Local PC consistently had lower response times at low pod counts, but ECS scaled better in handling more concurrent users at 2–3 pods.
 
 ---
 
-## 3. 实验结果
-
-### 3.1 实验数据表格
-
-根据Assignment要求，以下表格记录了不同Pod配置下的实验结果：
-
-#### Table 1: Experiment Results
-
-**Nectar/Azure** [请选择适用的平台]
-
-| # of Pods | Max Users | Avg. Response Time (ms) | Max Users | Avg. Response Time (ms) |
-|-----------|-----------|-------------------------|-----------|-------------------------|
-| 1         | [填写]    | [填写]                  | [填写]    | [填写]                  |
-| 2         | [填写]    | [填写]                  | [填写]    | [填写]                  |
-| 4         | [填写]    | [填写]                  | [填写]    | [填写]                  |
-| 8         | [填写]    | [填写]                  | [填写]    | [填写]                  |
-
-**Master** [如果使用主节点配置]
-
-| # of Pods | Max Users | Avg. Response Time (ms) | Max Users | Avg. Response Time (ms) |
-|-----------|-----------|-------------------------|-----------|-------------------------|
-| 1         | [填写]    | [填写]                  | [填写]    | [填写]                  |
-| 2         | [填写]    | [填写]                  | [填写]    | [填写]                  |
-| 4         | [填写]    | [填写]                  | [填写]    | [填写]                  |
-| 8         | [填写]    | [填写]                  | [填写]    | [填写]                  |
-
-### 3.2 详细性能指标
-
-#### 3.2.1 响应时间分析
-
-| Pod数量 | P50 (ms) | P95 (ms) | P99 (ms) | 最大响应时间 (ms) |
-|---------|----------|----------|----------|-------------------|
-| 1       | [填写]   | [填写]   | [填写]   | [填写]            |
-| 2       | [填写]   | [填写]   | [填写]   | [填写]            |
-| 4       | [填写]   | [填写]   | [填写]   | [填写]            |
-| 8       | [填写]   | [填写]   | [填写]   | [填写]            |
-
-#### 3.2.2 吞吐量分析
-
-| Pod数量 | 最大QPS | 平均QPS | 总请求数 | 成功率 (%) |
-|---------|---------|---------|----------|------------|
-| 1       | [填写]  | [填写]  | [填写]   | [填写]     |
-| 2       | [填写]  | [填写]  | [填写]   | [填写]     |
-| 4       | [填写]  | [填写]  | [填写]   | [填写]     |
-| 8       | [填写]  | [填写]  | [填写]   | [填写]     |
+## 3. Conclusions
+1. Scaling from 1 to 2 pods yields the most significant performance improvement in both environments.  
+2. Beyond 2–3 pods, improvements are marginal or even negative due to resource contention, scheduler overhead, and network limitations.  
+3. ECS Master Node handles higher concurrency better at optimal pod counts, but suffers performance degradation when over-scaled.
 
 ---
 
-## 4. 结果分析与观察 (1000字)
+## 4. Distributed Systems Challenges and Examples
 
-### 4.1 性能趋势分析
+### Challenge 1: **Load Balancing**
+- **Example in project:** Kubernetes Service evenly distributes requests to pods, improving response time up to 3 pods. Over-scaling to 4 pods increased coordination overhead, reducing efficiency.
 
-[请根据实验数据分析以下方面：]
+### Challenge 2: **Resource Management**
+- **Example in project:** CPU and memory limits per pod influenced scaling effectiveness. At 3 pods, resource utilization reached optimal balance; at 4 pods, contention caused degraded performance.
 
-**响应时间变化趋势**:
-- 描述随着用户数量增加，响应时间的变化模式
-- 分析不同Pod配置下响应时间的差异
-- 识别响应时间急剧增长的临界点
+### Challenge 3: **Network Latency**
+- **Example in project:** ECS Master Node initially had higher latency than Local PC due to cloud networking layers. Scaling helped mitigate impact, but at higher pod counts network overhead reappeared.
 
-**吞吐量扩展性**:
-- 分析Pod数量增加对QPS的影响
-- 计算水平扩展的效率（理想情况下应该线性增长）
-- 识别吞吐量瓶颈出现的条件
-
-**系统稳定性**:
-- 分析成功率随负载变化的趋势
-- 描述系统开始出现错误的负载水平
-- 评估系统在高负载下的稳定性表现
-
-### 4.2 扩展性评估
-
-**水平扩展效果**:
-- 比较1个Pod vs 2个Pod的性能提升比例
-- 分析4个Pod和8个Pod配置的边际收益
-- 评估是否存在扩展性瓶颈
-
-**资源利用效率**:
-- 分析CPU和内存资源的使用情况
-- 评估当前资源配置的合理性
-- 识别可能的资源浪费或不足
-
-### 4.3 性能瓶颈识别
-
-**系统瓶颈分析**:
-- 识别主要的性能限制因素（CPU、内存、网络、I/O）
-- 分析TensorFlow Lite模型推理的性能影响
-- 评估Flask应用的并发处理能力
-
-**网络和存储影响**:
-- 分析图像数据传输对性能的影响
-- 评估base64编码/解码的开销
-- 考虑网络延迟对整体性能的影响
-
-### 4.4 环境因素影响
-
-**云平台差异** (如果测试了多个平台):
-- 比较Nectar和Azure平台的性能差异
-- 分析不同云环境对结果的影响
-- 评估网络条件和硬件配置的影响
-
-**实验一致性**:
-- 描述多次实验结果的一致性
-- 分析可能影响结果稳定性的因素
-- 评估实验方法的可靠性
-
----
-
-## 5. 分布式系统挑战分析 (500字)
-
-### 5.1 挑战识别
-
-从本项目的实现和测试过程中，选择并分析三个分布式系统挑战：
-
-#### 挑战1: [选择一个挑战，例如：负载均衡]
-
-**问题描述**:
-[描述在CloudPose系统中如何体现这个挑战]
-
-**解决方案**:
-[说明在项目中如何解决或缓解这个问题]
-
-**实际效果**:
-[基于实验结果分析解决方案的效果]
-
-#### 挑战2: [选择第二个挑战，例如：容错性]
-
-**问题描述**:
-[描述挑战的具体表现]
-
-**解决方案**:
-[说明采用的解决方法]
-
-**实际效果**:
-[分析解决效果]
-
-#### 挑战3: [选择第三个挑战，例如：数据一致性]
-
-**问题描述**:
-[描述挑战的具体表现]
-
-**解决方案**:
-[说明采用的解决方法]
-
-**实际效果**:
-[分析解决效果]
-
-### 5.2 经验总结
-
-[总结在处理这些分布式系统挑战过程中获得的经验和教训]
-
----
-
-## 6. 结论与建议
-
-### 6.1 主要发现
-
-1. **最佳配置推荐**: 基于实验结果，推荐的Pod数量和用户负载配置
-2. **性能基准**: 系统在不同配置下的性能基准数据
-3. **扩展性评估**: 系统水平扩展的有效性和限制
-
-### 6.2 优化建议
-
-1. **架构优化**: 针对识别的瓶颈提出架构改进建议
-2. **资源配置**: 推荐的CPU、内存配置调整
-3. **代码优化**: 可能的代码层面优化方向
-
-### 6.3 未来工作
-
-1. **进一步测试**: 建议进行的额外测试场景
-2. **功能扩展**: 可以添加的新功能或改进
-3. **监控完善**: 建议增加的监控和告警机制
-
----
-
-## 7. 附录
-
-### 7.1 实验环境详细配置
-
-```yaml
-# Kubernetes Deployment配置
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: cloudpose-deployment
-spec:
-  replicas: [Pod数量]
-  selector:
-    matchLabels:
-      app: cloudpose
-  template:
-    metadata:
-      labels:
-        app: cloudpose
-    spec:
-      containers:
-      - name: cloudpose
-        image: [镜像名称]
-        resources:
-          requests:
-            cpu: 0.5
-            memory: 512Mi
-          limits:
-            cpu: 0.5
-            memory: 512Mi
-```
-
-### 7.2 测试脚本配置
-
-```python
-# Locust测试配置
-class CloudPoseUser(HttpUser):
-    wait_time = between(1, 3)
-    # [包含关键配置参数]
-```
-
-### 7.3 原始数据文件
-
-- `experiment_results.json`: 完整的实验数据
-- `experiment_summary.csv`: 汇总数据表格
-- `*.html`: Locust生成的详细报告
-
----
-
-**注意事项**:
-1. 请确保所有表格数据都已填写完整
-2. 分析部分应基于实际实验数据，避免空泛的描述
-3. 图表和可视化数据将有助于提高报告质量
-4. 报告总字数应控制在1500字以内（不包括表格和代码）
-5. 使用12pt Times字体，单栏，1英寸边距
-6. 在报告顶部包含完整的个人信息

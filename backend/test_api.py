@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-CloudPose API测试脚本
+CloudPose API Test Script
 """
 
 import base64
@@ -10,7 +10,7 @@ import sys
 import os
 
 def test_health_check():
-    """测试健康检查接口"""
+    """Test health check endpoint"""
     print("Testing health check endpoint...")
     try:
         response = requests.get('http://127.0.0.1:8000/health')
@@ -22,21 +22,21 @@ def test_health_check():
         return False
 
 def test_pose_detection():
-    """测试姿态检测接口"""
+    """Test pose detection endpoint"""
     print("\nTesting pose detection endpoint...")
     
-    # 读取测试图像
+    # Read test image
     image_path = '../model2-movenet/test.jpg'
     if not os.path.exists(image_path):
         print(f"Test image not found: {image_path}")
         return False
     
     try:
-        # 读取并编码图像
+        # Read and encode image
         with open(image_path, 'rb') as f:
             img_data = base64.b64encode(f.read()).decode()
         
-        # 发送请求
+        # Send request
         payload = {
             'image': img_data,
             'id': 'test_001'
@@ -56,7 +56,7 @@ def test_pose_detection():
             print(f"Response ID: {result.get('id')}")
             print(f"Status: {result.get('status')}")
             
-            # 显示前3个关键点作为示例
+            # Show first 3 keypoints as example
             keypoints = result.get('keypoints', [])
             if keypoints:
                 print("\nFirst 3 keypoints (y, x, confidence):")
@@ -72,11 +72,11 @@ def test_pose_detection():
         return False
 
 def test_invalid_request():
-    """测试无效请求处理"""
+    """Test invalid request handling"""
     print("\nTesting invalid request handling...")
     
     try:
-        # 测试缺少参数
+        # Test missing parameters
         response = requests.post(
             'http://127.0.0.1:8000/api/pose_detection',
             json={'image': 'invalid_base64'},
@@ -97,7 +97,7 @@ if __name__ == '__main__':
     print("CloudPose API Test Suite")
     print("=" * 40)
     
-    # 运行测试
+    # Run tests
     tests = [
         ("Health Check", test_health_check),
         ("Pose Detection", test_pose_detection),

@@ -12,7 +12,7 @@ services:
       - FLASK_ENV=production
       - MODEL_PATH=/app/model/movenet-full-256.tflite
     volumes:
-      # 可选：挂载日志目录
+      # Optional: mount log directory
       - ./logs:/app/logs
     restart: unless-stopped
     healthcheck:
@@ -21,7 +21,7 @@ services:
       timeout: 10s
       retries: 3
       start_period: 60s
-    # 资源限制
+    # Resource limits
     deploy:
       resources:
         limits:
@@ -30,21 +30,7 @@ services:
         reservations:
           cpus: '0.5'
           memory: 1G
-
-  # 可选：添加监控服务
-  # prometheus:
-  #   image: prom/prometheus:latest
-  #   container_name: prometheus
-  #   ports:
-  #     - "9090:9090"
-  #   volumes:
-  #     - ./prometheus.yml:/etc/prometheus/prometheus.yml
-  #   command:
-  #     - '--config.file=/etc/prometheus/prometheus.yml'
-  #     - '--storage.tsdb.path=/prometheus'
-  #     - '--web.console.libraries=/etc/prometheus/console_libraries'
-  #     - '--web.console.templates=/etc/prometheus/consoles'
-  #     - '--web.enable-lifecycle'
+          
 
 networks:
   default:

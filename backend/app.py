@@ -15,24 +15,24 @@ from prometheus_client import Counter, Histogram, generate_latest, CONTENT_TYPE_
 import psutil
 import threading
 
-# 配置日志
+# Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
 
-# Prometheus监控指标
+# Prometheus monitoring metrics
 REQUEST_COUNT = Counter('cloudpose_requests_total', 'Total requests', ['method', 'endpoint'])
 REQUEST_DURATION = Histogram('cloudpose_request_duration_seconds', 'Request duration')
 POSE_DETECTION_COUNT = Counter('cloudpose_pose_detections_total', 'Total pose detections')
 ERROR_COUNT = Counter('cloudpose_errors_total', 'Total errors', ['error_type'])
 
-# 全局变量存储模型
+# Global variables for model storage
 interpreter = None
 model_loaded = False
-model_lock = threading.Lock()  # 线程锁保护模型访问
+model_lock = threading.Lock()  # Thread lock to protect model access
 
-# MoveNet关键点名称
+# MoveNet keypoint names
 KEYPOINT_NAMES = [
     'nose', 'left_eye', 'right_eye', 'left_ear', 'right_ear',
     'left_shoulder', 'right_shoulder', 'left_elbow', 'right_elbow',
@@ -40,23 +40,23 @@ KEYPOINT_NAMES = [
     'left_knee', 'right_knee', 'left_ankle', 'right_ankle'
 ]
 
-# 骨骼连接定义
+# Skeleton connection definitions
 CONNECTIONS = [
-    (5, 6), (5, 11), (6, 12), (11, 12),  # 躯干
-    (5, 7), (6, 8), (7, 9), (8, 10),    # 手臂
-    (11, 13), (12, 14), (13, 15), (14, 16)  # 腿部
+    (5, 6), (5, 11), (6, 12), (11, 12),  # Torso
+    (5, 7), (6, 8), (7, 9), (8, 10),    # Arms
+    (11, 13), (12, 14), (13, 15), (14, 16)  # Legs
 ]
 
-# 颜色定义（BGR格式）
-KEYPOINT_COLOR = (0, 255, 0)  # 绿色
-CONNECTION_COLOR = (255, 0, 0)  # 蓝色
-BOX_COLOR = (0, 0, 255)  # 红色
+# Color definitions (BGR format)
+KEYPOINT_COLOR = (0, 255, 0)  # Green
+CONNECTION_COLOR = (255, 0, 0)  # Blue
+BOX_COLOR = (0, 0, 255)  # Red
 
 def load_model():
-    """加载MoveNet模型"""
+    """Load MoveNet model"""
     global interpreter, model_loaded
     try:
-        # 优先使用环境变量，否则使用默认容器路径
+        # Prioritize environment variable, otherwise use default container path
         model_path = os.environ.get('MODEL_PATH', '/app/model/movenet-full-256.tflite')
         if not os.path.exists(model_path):
             logger.error(f"Model file not found: {model_path}")
@@ -73,23 +73,23 @@ def load_model():
         return False
 
 def decode_base64_image(base64_string):
-    """解码base64图像数据"""
+    """Decode base64 image data"""
     try:
-        # 移除可能的数据URL前缀
+        # Remove possible data URL prefix
         if ',' in base64_string:
             base64_string = base64_string.split(',')[1]
         
-        # 解码base64
+        # Decode base64
         image_data = base64.b64decode(base64_string)
         
-        # 转换为PIL图像
+        # Convert to PIL image
         image = Image.open(io.BytesIO(image_data))
         
-        # 转换为RGB格式
+        # Convert to RGB format
         if image.mode != 'RGB':
             image = image.convert('RGB')
         
-        # 转换为numpy数组
+        # Convert to numpy array
         image_array = np.array(image)
         
         return image_array
@@ -98,16 +98,16 @@ def decode_base64_image(base64_string):
         return None
 
 def encode_image_to_base64(image_array):
-    """将图像数组编码为base64字符串"""
+    """Encode image array to base64 string"""
     try:
-        # 转换为PIL图像
+        # Convert to PIL image
         image = Image.fromarray(image_array.astype(np.uint8))
         
-        # 保存到字节流
+        # Save to byte stream
         buffer = io.BytesIO()
         image.save(buffer, format='JPEG', quality=95)
         
-        # 编码为base64
+        # Encode to base64
         image_base64 = base64.b64encode(buffer.getvalue()).decode('utf-8')
         
         return image_base64
@@ -116,31 +116,31 @@ def encode_image_to_base64(image_array):
         return None
 
 def detect_persons(image_array):
-    """检测图像中的人体并返回边界框"""
-    # 简单的人体检测实现（基于关键点可见性）
-    # 在实际应用中，可以使用专门的人体检测模型
+    """Detect persons in image and return bounding boxes"""
+    # Simple person detection implementation (based on keypoint visibility)
+    # In real applications, specialized person detection models can be used
     height, width = image_array.shape[:2]
     
-    # 执行姿态检测获取关键点
+    # Perform pose detection to get keypoints
     keypoints = predict_pose_single(image_array)
     
     persons = []
     if keypoints and len(keypoints) > 0:
-        # keypoints是一个17x3的列表，每个元素是[y, x, confidence]
-        # 计算边界框
+        # keypoints is a 17x3 list, each element is [y, x, confidence]
+        # Calculate bounding box
         visible_points = []
         confidence_scores = []
         
         for i, kp in enumerate(keypoints):
             try:
-                # 确保kp是列表且有3个元素
+                # Ensure kp is a list with 3 elements
                 if isinstance(kp, list) and len(kp) >= 3:
                     confidence = float(kp[2]) if not isinstance(kp[2], list) else float(kp[2][0]) if kp[2] else 0.0
-                    if confidence > 0.3:  # 检查置信度
+                    if confidence > 0.3:  # Check confidence
                         x_coord = float(kp[1]) if not isinstance(kp[1], list) else float(kp[1][0]) if kp[1] else 0.0
                         y_coord = float(kp[0]) if not isinstance(kp[0], list) else float(kp[0][0]) if kp[0] else 0.0
-                        x = x_coord * width  # x坐标
-                        y = y_coord * height  # y坐标
+                        x = x_coord * width  # x coordinate
+                        y = y_coord * height  # y coordinate
                         visible_points.append((x, y))
                         confidence_scores.append(confidence)
             except (TypeError, ValueError, IndexError) as e:
@@ -154,7 +154,7 @@ def detect_persons(image_array):
             x_min, x_max = min(x_coords), max(x_coords)
             y_min, y_max = min(y_coords), max(y_coords)
             
-            # 添加边距
+            # Add margin
             margin = 20
             x_min = max(0, x_min - margin)
             y_min = max(0, y_min - margin)
@@ -177,37 +177,37 @@ def detect_persons(image_array):
     return persons
 
 def predict_pose_single(image_array):
-    """使用MoveNet模型进行单人姿态检测"""
+    """Perform single-person pose detection using MoveNet model"""
     global interpreter, model_lock
     
     if not model_loaded or interpreter is None:
         raise Exception("Model not loaded")
     
-    # 使用线程锁保护整个推理过程
+    # Use thread lock to protect the entire inference process
     with model_lock:
         try:
-            # 获取输入输出详情
+            # Get input and output details
             input_details = interpreter.get_input_details()
             output_details = interpreter.get_output_details()
             
-            # 获取输入尺寸
+            # Get input size
             input_shape = input_details[0]['shape'][1:3]  # [height, width]
             
-            # 调整图像尺寸
+            # Resize image
             resized_image = cv2.resize(image_array, (input_shape[1], input_shape[0]))
             
-            # 归一化到[0,1]
+            # Normalize to [0,1]
             input_data = np.expand_dims(resized_image, axis=0).astype(np.float32) / 255.0
             
-            # 执行推理
+            # Execute inference
             interpreter.set_tensor(input_details[0]['index'], input_data)
             interpreter.invoke()
             
-            # 获取关键点输出并立即复制数据以避免内存引用问题
+            # Get keypoint output and immediately copy data to avoid memory reference issues
             keypoints_output = interpreter.get_tensor(output_details[0]['index']).copy()
             keypoints = keypoints_output[0]  # Shape: (17, 3) - [y, x, confidence]
             
-            # 转换为列表格式
+            # Convert to list format
             keypoints_list = keypoints.tolist()
             
             return keypoints_list
@@ -217,9 +217,9 @@ def predict_pose_single(image_array):
             raise
 
 def draw_pose_on_image(image_array, persons):
-    """在图像上绘制姿态关键点和骨骼连接"""
+    """Draw pose keypoints and skeleton connections on image"""
     try:
-        # 复制图像以避免修改原图
+        # Copy image to avoid modifying original
         annotated_image = image_array.copy()
         height, width = annotated_image.shape[:2]
         
@@ -227,36 +227,36 @@ def draw_pose_on_image(image_array, persons):
             keypoints = person['keypoints']
             box = person['box']
             
-            # 绘制边界框
+            # Draw bounding box
             cv2.rectangle(annotated_image, 
                          (box['x'], box['y']), 
                          (box['x'] + box['width'], box['y'] + box['height']), 
                          BOX_COLOR, 2)
             
-            # 绘制置信度
+            # Draw confidence
             cv2.putText(annotated_image, f"{box['probability']:.2f}", 
                        (box['x'], box['y'] - 10), 
                        cv2.FONT_HERSHEY_SIMPLEX, 0.5, BOX_COLOR, 1)
             
-            # 绘制骨骼连接
+            # Draw skeleton connections
             for connection in CONNECTIONS:
                 kp1_idx, kp2_idx = connection
                 kp1 = keypoints[kp1_idx]
                 kp2 = keypoints[kp2_idx]
                 
-                # 检查关键点可见性
+                # Check keypoint visibility
                 if kp1[2] > 0.3 and kp2[2] > 0.3:
                     x1, y1 = int(kp1[1] * width), int(kp1[0] * height)
                     x2, y2 = int(kp2[1] * width), int(kp2[0] * height)
                     cv2.line(annotated_image, (x1, y1), (x2, y2), CONNECTION_COLOR, 2)
             
-            # 绘制关键点
+            # Draw keypoints
             for i, keypoint in enumerate(keypoints):
-                if keypoint[2] > 0.3:  # 置信度阈值
+                if keypoint[2] > 0.3:  # Confidence threshold
                     x, y = int(keypoint[1] * width), int(keypoint[0] * height)
                     cv2.circle(annotated_image, (x, y), 4, KEYPOINT_COLOR, -1)
                     
-                    # 可选：添加关键点标签
+                    # Optional: add keypoint labels
                     # cv2.putText(annotated_image, str(i), (x+5, y-5), 
                     #            cv2.FONT_HERSHEY_SIMPLEX, 0.3, KEYPOINT_COLOR, 1)
         
@@ -268,11 +268,11 @@ def draw_pose_on_image(image_array, persons):
 
 @app.route('/health', methods=['GET'])
 def health_check():
-    """健康检查接口"""
+    """Health check endpoint"""
     REQUEST_COUNT.labels(method='GET', endpoint='/health').inc()
     
     try:
-        # 获取系统资源信息
+        # Get system resource information
         cpu_percent = psutil.cpu_percent()
         memory = psutil.virtual_memory()
         
@@ -298,7 +298,7 @@ def health_check():
 
 @app.route('/api/pose_detection', methods=['POST'])
 def pose_detection():
-    """姿态检测API接口 - 返回JSON数据"""
+    """Pose detection API endpoint - returns JSON data"""
     REQUEST_COUNT.labels(method='POST', endpoint='/api/pose_detection').inc()
     
     start_time = time.time()
@@ -307,7 +307,7 @@ def pose_detection():
     postprocess_time = 0
     
     try:
-        # 验证请求内容类型
+        # Validate request content type
         if not request.is_json:
             ERROR_COUNT.labels(error_type='invalid_content_type').inc()
             return jsonify({
@@ -315,10 +315,10 @@ def pose_detection():
                 'message': 'Content-Type must be application/json'
             }), 400
         
-        # 获取请求数据
+        # Get request data
         data = request.get_json()
         
-        # 验证必需参数
+        # Validate required parameters
         if not data or 'image' not in data or 'id' not in data:
             ERROR_COUNT.labels(error_type='missing_parameters').inc()
             return jsonify({
@@ -329,7 +329,7 @@ def pose_detection():
         image_data = data['image']
         request_id = data['id']
         
-        # 验证参数类型
+        # Validate parameter types
         if not isinstance(image_data, str) or not isinstance(request_id, str):
             ERROR_COUNT.labels(error_type='invalid_parameter_type').inc()
             return jsonify({
@@ -337,7 +337,7 @@ def pose_detection():
                 'message': 'Parameters "image" and "id" must be strings'
             }), 400
         
-        # 检查模型是否已加载
+        # Check if model is loaded
         if not model_loaded:
             ERROR_COUNT.labels(error_type='model_not_loaded').inc()
             return jsonify({
@@ -346,10 +346,10 @@ def pose_detection():
                 'message': 'Model not loaded'
             }), 503
         
-        # 预处理阶段
+        # Preprocessing stage
         preprocess_start = time.time()
         
-        # 解码图像
+        # Decode image
         image_array = decode_base64_image(image_data)
         if image_array is None:
             ERROR_COUNT.labels(error_type='invalid_image').inc()
@@ -361,31 +361,31 @@ def pose_detection():
         
         preprocess_time = time.time() - preprocess_start
         
-        # 推理阶段
+        # Inference stage
         inference_start = time.time()
         
-        # 检测人体
+        # Detect persons
         persons = detect_persons(image_array)
         
         inference_time = time.time() - inference_start
         
-        # 后处理阶段
+        # Postprocessing stage
         postprocess_start = time.time()
         
-        # 格式化响应数据
+        # Format response data
         boxes = [person['box'] for person in persons]
         keypoints = [person['keypoints'] for person in persons]
         count = len(persons)
         
         postprocess_time = time.time() - postprocess_start
         
-        # 记录成功的姿态检测
+        # Record successful pose detection
         POSE_DETECTION_COUNT.inc()
         
-        # 记录请求持续时间
+        # Record request duration
         REQUEST_DURATION.observe(time.time() - start_time)
         
-        # 返回成功响应
+        # Return success response
         return jsonify({
             'id': request_id,
             'count': count,
@@ -401,7 +401,7 @@ def pose_detection():
         logger.error(f"Pose detection error: {e}")
         logger.error(traceback.format_exc())
         
-        # 获取请求ID（如果可能）
+        # Get request ID (if possible)
         request_id = None
         try:
             data = request.get_json()
@@ -425,7 +425,7 @@ def pose_detection():
 
 @app.route('/api/pose_estimation_image', methods=['POST'])
 def pose_estimation_image():
-    """姿态检测图像API接口 - 返回带注释的图像"""
+    """Pose detection image API endpoint - returns annotated image"""
     REQUEST_COUNT.labels(method='POST', endpoint='/api/pose_estimation_image').inc()
     
     start_time = time.time()
@@ -434,7 +434,7 @@ def pose_estimation_image():
     postprocess_time = 0
     
     try:
-        # 验证请求内容类型
+        # Validate request content type
         if not request.is_json:
             ERROR_COUNT.labels(error_type='invalid_content_type').inc()
             return jsonify({
@@ -442,10 +442,10 @@ def pose_estimation_image():
                 'message': 'Content-Type must be application/json'
             }), 400
         
-        # 获取请求数据
+        # Get request data
         data = request.get_json()
         
-        # 验证必需参数
+        # Validate required parameters
         if not data or 'image' not in data or 'id' not in data:
             ERROR_COUNT.labels(error_type='missing_parameters').inc()
             return jsonify({
@@ -456,7 +456,7 @@ def pose_estimation_image():
         image_data = data['image']
         request_id = data['id']
         
-        # 验证参数类型
+        # Validate parameter types
         if not isinstance(image_data, str) or not isinstance(request_id, str):
             ERROR_COUNT.labels(error_type='invalid_parameter_type').inc()
             return jsonify({
@@ -464,7 +464,7 @@ def pose_estimation_image():
                 'message': 'Parameters "image" and "id" must be strings'
             }), 400
         
-        # 检查模型是否已加载
+        # Check if model is loaded
         if not model_loaded:
             ERROR_COUNT.labels(error_type='model_not_loaded').inc()
             return jsonify({
@@ -473,10 +473,10 @@ def pose_estimation_image():
                 'message': 'Model not loaded'
             }), 503
         
-        # 预处理阶段
+        # Preprocessing stage
         preprocess_start = time.time()
         
-        # 解码图像
+        # Decode image
         image_array = decode_base64_image(image_data)
         if image_array is None:
             ERROR_COUNT.labels(error_type='invalid_image').inc()
@@ -488,21 +488,21 @@ def pose_estimation_image():
         
         preprocess_time = time.time() - preprocess_start
         
-        # 推理阶段
+        # Inference stage
         inference_start = time.time()
         
-        # 检测人体
+        # Detect persons
         persons = detect_persons(image_array)
         
         inference_time = time.time() - inference_start
         
-        # 后处理阶段
+        # Postprocessing stage
         postprocess_start = time.time()
         
-        # 在图像上绘制姿态
+        # Draw pose on image
         annotated_image = draw_pose_on_image(image_array, persons)
         
-        # 编码为base64
+        # Encode to base64
         annotated_image_base64 = encode_image_to_base64(annotated_image)
         if annotated_image_base64 is None:
             ERROR_COUNT.labels(error_type='image_encoding_failed').inc()
@@ -514,13 +514,13 @@ def pose_estimation_image():
         
         postprocess_time = time.time() - postprocess_start
         
-        # 记录成功的姿态检测
+        # Record successful pose detection
         POSE_DETECTION_COUNT.inc()
         
-        # 记录请求持续时间
+        # Record request duration
         REQUEST_DURATION.observe(time.time() - start_time)
         
-        # 返回成功响应
+        # Return success response
         return jsonify({
             'id': request_id,
             'annotated_image': annotated_image_base64,
@@ -534,7 +534,7 @@ def pose_estimation_image():
         logger.error(f"Pose estimation image error: {e}")
         logger.error(traceback.format_exc())
         
-        # 获取请求ID（如果可能）
+        # Get request ID (if possible)
         request_id = None
         try:
             data = request.get_json()
@@ -558,12 +558,12 @@ def pose_estimation_image():
 
 @app.route('/metrics', methods=['GET'])
 def metrics():
-    """Prometheus监控指标端点"""
+    """Prometheus monitoring metrics endpoint"""
     return generate_latest(), 200, {'Content-Type': CONTENT_TYPE_LATEST}
 
 @app.route('/', methods=['GET'])
 def api_documentation():
-    """API文档页面"""
+    """API documentation page"""
     REQUEST_COUNT.labels(method='GET', endpoint='/').inc()
     
     doc_html = """
@@ -581,21 +581,21 @@ def api_documentation():
         </style>
     </head>
     <body>
-        <h1 class="header">CloudPose 姿态检测 API v2.0</h1>
+        <h1 class="header">CloudPose Pose Detection API v2.0</h1>
         
         <div class="endpoint">
             <h2><span class="method">POST</span> /api/pose_detection</h2>
-            <p>执行人体姿态检测，返回人数、边界框、关键点和处理时间统计</p>
+            <p>Perform human pose detection, return person count, bounding boxes, keypoints and processing time statistics</p>
             
-            <h3>请求参数:</h3>
+            <h3>Request Parameters:</h3>
             <div class="code">
                 <pre>{
-  "image": "base64编码的图像数据",
-  "id": "请求唯一标识符"
+  "image": "base64 encoded image data",
+  "id": "unique request identifier"
 }</pre>
             </div>
             
-            <h3>响应示例:</h3>
+            <h3>Response Example:</h3>
             <div class="code">
                 <pre>{
   "id": "550e8400-e29b-41d4-a716-446655440000",
@@ -615,21 +615,21 @@ def api_documentation():
         
         <div class="endpoint">
             <h2><span class="method">POST</span> /api/pose_estimation_image</h2>
-            <p>执行人体姿态检测，返回带注释的base64编码图像</p>
+            <p>Perform human pose detection, return annotated base64 encoded image</p>
             
-            <h3>请求参数:</h3>
+            <h3>Request Parameters:</h3>
             <div class="code">
                 <pre>{
-  "image": "base64编码的图像数据",
-  "id": "请求唯一标识符"
+  "image": "base64 encoded image data",
+  "id": "unique request identifier"
 }</pre>
             </div>
             
-            <h3>响应示例:</h3>
+            <h3>Response Example:</h3>
             <div class="code">
                 <pre>{
   "id": "550e8400-e29b-41d4-a716-446655440000",
-  "annotated_image": "base64编码的带注释图像",
+  "annotated_image": "base64 encoded annotated image",
   "speed_preprocess": 0.012,
   "speed_inference": 0.045,
   "speed_postprocess": 0.008
@@ -639,9 +639,9 @@ def api_documentation():
         
         <div class="endpoint">
             <h2><span class="method">GET</span> /health</h2>
-            <p>检查服务健康状态和系统资源</p>
+            <p>Check service health status and system resources</p>
             
-            <h3>响应示例:</h3>
+            <h3>Response Example:</h3>
             <div class="code">
                 <pre>{
   "status": "healthy",
@@ -658,12 +658,12 @@ def api_documentation():
         
         <div class="endpoint">
             <h2><span class="method">GET</span> /metrics</h2>
-            <p>Prometheus监控指标端点</p>
+            <p>Prometheus monitoring metrics endpoint</p>
         </div>
         
         <div class="endpoint">
-            <h2>关键点说明</h2>
-            <p>MoveNet模型返回17个人体关键点，每个关键点包含[y, x, confidence]三个值：</p>
+            <h2>Keypoint Description</h2>
+            <p>MoveNet model returns 17 human body keypoints, each keypoint contains three values [y, x, confidence]:</p>
             <div class="code">
                 <pre>0: nose, 1: left_eye, 2: right_eye, 3: left_ear, 4: right_ear
 5: left_shoulder, 6: right_shoulder, 7: left_elbow, 8: right_elbow
@@ -673,15 +673,15 @@ def api_documentation():
         </div>
         
         <div class="endpoint">
-            <h2>边界框格式</h2>
-            <p>每个检测到的人体都有一个边界框，包含以下字段：</p>
+            <h2>Bounding Box Format</h2>
+            <p>Each detected person has a bounding box containing the following fields:</p>
             <div class="code">
                 <pre>{
-  "x": 左上角x坐标,
-  "y": 左上角y坐标,
-  "width": 宽度,
-  "height": 高度,
-  "probability": 置信度 (0-1)
+  "x": top-left x coordinate,
+  "y": top-left y coordinate,
+  "width": width,
+  "height": height,
+  "probability": confidence (0-1)
 }</pre>
             </div>
         </div>
@@ -691,12 +691,12 @@ def api_documentation():
     return doc_html
 
 if __name__ == '__main__':
-    # 启动时加载模型
+    # Load model at startup
     logger.info("Starting CloudPose API server v2.0...")
     if load_model():
         logger.info("Model loaded successfully, starting server")
     else:
         logger.warning("Model loading failed, server will start but pose detection will not work")
     
-    # 启动Flask应用
+    # Start Flask application
     app.run(host='0.0.0.0', port=8000, debug=True)

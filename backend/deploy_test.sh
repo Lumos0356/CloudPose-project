@@ -1,14 +1,14 @@
 #!/bin/bash
 
-# CloudPose 部署验证脚本
-# 用于测试修复后的Docker配置
+# CloudPose Deployment Verification Script
+# Used to test fixed Docker configuration
 
 set -e
 
-echo "=== CloudPose 部署验证脚本 ==="
-echo "检查必要文件是否存在..."
+echo "=== CloudPose Deployment Verification Script ==="
+echo "Checking if required files exist..."
 
-# 检查必要文件
+# Check required files
 required_files=(
     "../model2-movenet/movenet-full-256.tflite"
     "app.py"
@@ -20,71 +20,71 @@ required_files=(
 
 for file in "${required_files[@]}"; do
     if [ -f "$file" ]; then
-        echo "✓ $file 存在"
+        echo "✓ $file exists"
     else
-        echo "✗ $file 不存在"
+        echo "✗ $file does not exist"
         exit 1
     fi
 done
 
 echo ""
-echo "开始构建Docker镜像..."
+echo "Starting Docker image build..."
 docker-compose build
 
 if [ $? -eq 0 ]; then
-    echo "✓ Docker镜像构建成功"
+    echo "✓ Docker image build successful"
 else
-    echo "✗ Docker镜像构建失败"
+    echo "✗ Docker image build failed"
     exit 1
 fi
 
 echo ""
-echo "启动服务..."
+echo "Starting service..."
 docker-compose up -d
 
 if [ $? -eq 0 ]; then
-    echo "✓ 服务启动成功"
+    echo "✓ Service started successfully"
 else
-    echo "✗ 服务启动失败"
+    echo "✗ Service startup failed"
     exit 1
 fi
 
 echo ""
-echo "等待服务就绪..."
+echo "Waiting for service to be ready..."
 sleep 10
 
-echo "测试健康检查接口..."
+echo "Testing health check endpoint..."
 health_response=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8000/health)
 
 if [ "$health_response" = "200" ]; then
-    echo "✓ 健康检查通过 (HTTP $health_response)"
+    echo "✓ Health check passed (HTTP $health_response)"
 else
-    echo "✗ 健康检查失败 (HTTP $health_response)"
-    echo "查看容器日志:"
+    echo "✗ Health check failed (HTTP $health_response)"
+    echo "Viewing container logs:"
     docker-compose logs cloudpose-api
     exit 1
 fi
 
 echo ""
-echo "测试姿态检测接口..."
+echo "Testing pose detection endpoint..."
 test_response=$(curl -s -o /dev/null -w "%{http_code}" -X POST \
     -H "Content-Type: application/json" \
     -d '{"image_data": "test"}' \
     http://localhost:8000/pose_detection)
 
 if [ "$test_response" = "400" ] || [ "$test_response" = "200" ]; then
-    echo "✓ 姿态检测接口响应正常 (HTTP $test_response)"
+    echo "✓ Pose detection endpoint responding normally (HTTP $test_response)"
 else
-    echo "✗ 姿态检测接口异常 (HTTP $test_response)"
+    echo "✗ Pose detection endpoint abnormal (HTTP $test_response)"
 fi
 
 echo ""
-echo "=== 部署验证完成 ==="
-echo "服务状态:"
+echo "=== Deployment Verification Complete ==="
+echo "Service status:"
 docker-compose ps
 
 echo ""
-echo "如需停止服务，请运行: docker-compose down"
-echo "如需查看日志，请运行: docker-compose logs -f cloudpose-api"
-echo "服务地址: http://localhost:8000"
-echo "健康检查: http://localhost:8000/health"
+echo "To stop the service, run: docker-compose down"
+echo "To view logs, run: docker-compose logs -f cloudpose-api"
+echo "Service address: http://localhost:8000"
+echo "Health check: http://localhost:8000/health"

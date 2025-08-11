@@ -1,56 +1,56 @@
-# CloudPose 后端服务
+# CloudPose Backend Service
 
-基于Flask的人体姿态检测API服务，使用MoveNet深度学习模型提供实时姿态分析能力。
+A Flask-based human pose detection API service that uses the MoveNet deep learning model to provide real-time pose analysis capabilities.
 
-## 功能特性
+## Features
 
-- 🎯 **姿态检测**: 使用MoveNet模型检测17个人体关键点
-- 🚀 **RESTful API**: 标准的HTTP接口，支持JSON格式
-- 📊 **健康监控**: 提供服务状态和模型加载状态检查
-- 🛡️ **错误处理**: 完善的异常处理和错误响应
-- 📖 **API文档**: 内置的接口文档页面
+- 🎯 **Pose Detection**: Uses MoveNet model to detect 17 human body keypoints
+- 🚀 **RESTful API**: Standard HTTP interface with JSON format support
+- 📊 **Health Monitoring**: Provides service status and model loading status checks
+- 🛡️ **Error Handling**: Comprehensive exception handling and error responses
+- 📖 **API Documentation**: Built-in interface documentation page
 
-## 安装依赖
+## Installation
 
 ```bash
-# 安装Python依赖
+# Install Python dependencies
 pip install -r requirements.txt
 ```
 
-## 启动服务
+## Starting the Service
 
-### 开发环境
+### Development Environment
 
 ```bash
-# 方式1: 使用启动脚本
+# Method 1: Using startup script
 python run.py
 
-# 方式2: 直接运行Flask应用
+# Method 2: Running Flask application directly
 python app.py
 ```
 
-### 生产环境
+### Production Environment
 
 ```bash
-# 使用gunicorn部署
+# Deploy using gunicorn
 gunicorn -w 4 -b 0.0.0.0:8000 app:app
 ```
 
-## API接口
+## API Endpoints
 
-### 1. 姿态检测
+### 1. Pose Detection
 
-**接口**: `POST /api/pose_detection`
+**Endpoint**: `POST /api/pose_detection`
 
-**请求示例**:
+**Request Example**:
 ```json
 {
-  "image": "base64编码的图像数据",
+  "image": "base64-encoded image data",
   "id": "550e8400-e29b-41d4-a716-446655440000"
 }
 ```
 
-**响应示例**:
+**Response Example**:
 ```json
 {
   "status": "success",
@@ -63,11 +63,11 @@ gunicorn -w 4 -b 0.0.0.0:8000 app:app
 }
 ```
 
-### 2. 健康检查
+### 2. Health Check
 
-**接口**: `GET /health`
+**Endpoint**: `GET /health`
 
-**响应示例**:
+**Response Example**:
 ```json
 {
   "status": "healthy",
@@ -76,15 +76,15 @@ gunicorn -w 4 -b 0.0.0.0:8000 app:app
 }
 ```
 
-### 3. API文档
+### 3. API Documentation
 
-**接口**: `GET /`
+**Endpoint**: `GET /`
 
-访问 `http://localhost:8000/` 查看完整的API文档。
+Visit `http://localhost:8000/` to view the complete API documentation.
 
-## 关键点说明
+## Keypoint Description
 
-MoveNet模型返回17个人体关键点，每个关键点包含 `[y, x, confidence]` 三个值：
+The MoveNet model returns 17 human body keypoints, each keypoint contains three values `[y, x, confidence]`:
 
 ```
 0: nose          1: left_eye       2: right_eye
@@ -95,45 +95,45 @@ MoveNet模型返回17个人体关键点，每个关键点包含 `[y, x, confiden
 15: left_ankle   16: right_ankle
 ```
 
-## 错误处理
+## Error Handling
 
-服务提供详细的错误信息：
+The service provides detailed error information:
 
-- `400 Bad Request`: 请求参数错误
-- `500 Internal Server Error`: 服务器内部错误
-- `503 Service Unavailable`: 模型未加载
+- `400 Bad Request`: Request parameter error
+- `500 Internal Server Error`: Server internal error
+- `503 Service Unavailable`: Model not loaded
 
-## 测试客户端
+## Test Client
 
-可以使用项目根目录的 `cloudpose_client.py` 测试API：
+You can use the `cloudpose_client.py` in the project root directory to test the API:
 
 ```bash
-# 从项目根目录运行
+# Run from project root directory
 python cloudpose_client.py inputfolder/ http://localhost:8000/api/pose_detection 4
 ```
 
-## 项目结构
+## Project Structure
 
 ```
 backend/
-├── app.py              # Flask主应用
-├── run.py              # 启动脚本
-├── requirements.txt    # Python依赖
-└── README.md          # 说明文档
+├── app.py              # Flask main application
+├── run.py              # Startup script
+├── requirements.txt    # Python dependencies
+└── README.md          # Documentation
 ```
 
-## 技术栈
+## Technology Stack
 
-- **Web框架**: Flask 2.3.3
-- **AI模型**: TensorFlow Lite 2.13.0
-- **图像处理**: OpenCV 4.8.1, Pillow 10.0.1
-- **数值计算**: NumPy 1.24.3
-- **生产部署**: Gunicorn 21.2.0
+- **Web Framework**: Flask 2.3.3
+- **AI Model**: TensorFlow Lite 2.13.0
+- **Image Processing**: OpenCV 4.8.1, Pillow 10.0.1
+- **Numerical Computing**: NumPy 1.24.3
+- **Production Deployment**: Gunicorn 21.2.0
 
-## 注意事项
+## Notes
 
-1. 确保 `../model2-movenet/movenet-full-256.tflite` 模型文件存在
-2. 服务默认运行在 `http://localhost:8000`
-3. 图像数据需要base64编码
-4. 支持JPG和PNG格式图像
-5. 建议图像尺寸不超过2MB
+1. Ensure the `../model2-movenet/movenet-full-256.tflite` model file exists
+2. Service runs on `http://localhost:8000` by default
+3. Image data needs to be base64 encoded
+4. Supports JPG and PNG format images
+5. Recommended image size should not exceed 2MB
